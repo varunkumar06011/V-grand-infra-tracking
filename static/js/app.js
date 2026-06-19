@@ -618,7 +618,7 @@ function renderSuperStructure() {
       statuses.forEach(st => {
         const isActive = currentStatus === st;
         const activeClass = isActive ? `active-${st}` : '';
-        html += `<td><div class="ss-cell ${activeClass}" data-cell="${cellId}" data-work="${wi}" data-status="${st}" data-block="${block}" title="${statusLabels[st]}"></div></td>`;
+        html += `<td><div class="ss-cell ${activeClass}" data-cell="${cellId}" data-work="${wi}" data-status="${st}" data-block="${block}" title="${statusLabels[st]}"></div><span class="history-link" data-cell="${cellId}" data-work="${wi}" data-flat="-" data-workname="${item}" style="font-size:0.65rem;">history</span></td>`;
       });
       html += `</tr>`;
     });
@@ -648,6 +648,16 @@ function renderSuperStructure() {
       const wi = parseInt(cell.dataset.work);
       const itemName = SUPER_STRUCTURE_ITEMS[wi];
       openTimelineModal(cell.dataset.cell, wi, '-', itemName);
+    });
+  });
+
+  // History link clicks
+  ssGrid.querySelectorAll('.history-link').forEach(link => {
+    link.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const wi = parseInt(link.dataset.work);
+      const itemName = link.dataset.workname || SUPER_STRUCTURE_ITEMS[wi];
+      openTimelineModal(link.dataset.cell, wi, '-', itemName);
     });
   });
 }
