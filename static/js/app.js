@@ -477,7 +477,7 @@ function renderSummary() {
   let html = '';
   flats.forEach((flat, idx) => {
     let flatRemarks = [];
-    let latestDate = '';
+    let latestEntry = null;
     for (let wi = 0; wi < workItems.length; wi++) {
       const cellId = getCellId(currentBlock, currentFloor, flat, wi);
       const cell = cellsCache[cellId];
@@ -486,9 +486,12 @@ function renderSummary() {
       }
       if (cell && cell.timeline && cell.timeline.length > 0) {
         const last = cell.timeline[cell.timeline.length - 1];
-        if (last.date) latestDate = last.date;
+        if (last.timestamp && (!latestEntry || last.timestamp > latestEntry.timestamp)) {
+          latestEntry = last;
+        }
       }
     }
+    const latestDate = latestEntry ? latestEntry.date : '';
     const remarksText = flatRemarks.length > 0
       ? flatRemarks.join(' | ').substring(0, 200) + (flatRemarks.join(' | ').length > 200 ? '...' : '')
       : '';
