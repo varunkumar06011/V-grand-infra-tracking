@@ -17,23 +17,12 @@ const BLOCKS = ['A', 'B'];
 const FLOORS = [1, 2, 3, 4, 5];
 const FLATS_PER_FLOOR = 6;
 
-// Demo mode
-const DEMO_EMAIL = 'vgrand@123';
-const DEMO_PASSWORD = 'vgrand1234';
-let useDemoMode = false;
+const LOGIN_EMAIL = 'vgrand@123';
+const LOGIN_PASSWORD = 'vgrand1234';
 
-// Pre-fill inputs
-document.addEventListener('DOMContentLoaded', () => {
-  emailInput.value = DEMO_EMAIL;
-  passwordInput.value = DEMO_PASSWORD;
-});
-
-function demoNow() {
-  return { toMillis: () => Date.now(), seconds: Math.floor(Date.now() / 1000) };
-}
-
-function demoDbGet(docPath) {
-  const key = 'vgrand_demo_' + docPath.replace(/\//g, '_');
+// localStorage helpers
+function dbGet(docPath) {
+  const key = 'vgrand_' + docPath.replace(/\//g, '_');
   const raw = localStorage.getItem(key);
   if (raw) {
     const data = JSON.parse(raw);
@@ -42,20 +31,13 @@ function demoDbGet(docPath) {
   return { exists: false, data: () => null };
 }
 
-function demoDbSet(docPath, data, merge = false) {
-  const key = 'vgrand_demo_' + docPath.replace(/\//g, '_');
+function dbSet(docPath, data, merge = false) {
+  const key = 'vgrand_' + docPath.replace(/\//g, '_');
   let existing = {};
   const raw = localStorage.getItem(key);
   if (raw) existing = JSON.parse(raw);
   const merged = merge ? { ...existing, ...data } : { ...data };
   localStorage.setItem(key, JSON.stringify(merged));
-}
-
-function demoAuthSignIn(email, password) {
-  if (email === DEMO_EMAIL && password === DEMO_PASSWORD) {
-    return { email: DEMO_EMAIL, uid: 'demo-user-1' };
-  }
-  throw new Error('Invalid demo credentials. Use vgrand@123 / vgrand1234');
 }
 
 // State
@@ -105,11 +87,14 @@ const addWorkBtn = document.getElementById('add-work-btn');
 const saveSettingsBtn = document.getElementById('save-settings-btn');
 const demoLoginBtn = document.getElementById('demo-login');
 
-const db = firebase.firestore();
-const auth = firebase.auth();
-
 // --- Auth ---
 let isRegister = false;
+
+// Pre-fill inputs
+document.addEventListener('DOMContentLoaded', () => {
+  emailInput.value = LOGIN_EMAIL;
+  passwordInput.value = LOGIN_PASSWORD;
+});
 
 authToggle.addEventListener('click', () => {
   isRegister = !isRegister;
@@ -119,9 +104,9 @@ authToggle.addEventListener('click', () => {
   authError.textContent = '';
 });
 
-async function handleLoginSuccess(user) {
-  currentUser = user;
-  userEmail.textContent = user.email;
+async function handleLoginSuccess(email) {
+  currentUser = { email: email };
+  userEmail.textContent = email;
   authScreen.style.display = 'none';
   dashboard.style.display = 'block';
   settingsPage.style.display = 'none';
@@ -135,54 +120,38 @@ function handleLogout() {
   settingsPage.style.display = 'none';
 }
 
+function checkLogin(email, password) {
+  if (email === LOGIN_EMAIL && password === LOGIN_PASSWORD) {
+    return { email: LOGIN_EMAIL };
+  }
+  throw new Error('Invalid credentials. Use vgrand@123 / vgrand1234');
+}
+
 authSubmit.addEventListener('click', async () => {
   const email = emailInput.value.trim();
   const password = passwordInput.value.trim();
   authError.textContent = '';
   try {
-    if (email === DEMO_EMAIL && password === DEMO_PASSWORD) {
-      useDemoMode = true;
-      handleLoginSuccess(demoAuthSignIn(email, password));
-      return;
-    }
-    if (isRegister) {
-      await auth.createUserWithEmailAndPassword(email, password);
-    } else {
-      await auth.signInWithEmailAndPassword(email, password);
-    }
+    checkLogin(email, password);
+    await handleLoginSuccess(email);
   } catch (err) {
     authError.textContent = err.message;
   }
 });
 
 demoLoginBtn.addEventListener('click', async () => {
-  emailInput.value = DEMO_EMAIL;
-  passwordInput.value = DEMO_PASSWORD;
+  emailInput.value = LOGIN_EMAIL;
+  passwordInput.value = LOGIN_PASSWORD;
   authError.textContent = '';
   try {
-    useDemoMode = true;
-    handleLoginSuccess(demoAuthSignIn(DEMO_EMAIL, DEMO_PASSWORD));
+    checkLogin(LOGIN_EMAIL, LOGIN_PASSWORD);
+    await handleLoginSuccess(LOGIN_EMAIL);
   } catch (err) {
     authError.textContent = err.message;
   }
 });
 
-signOutBtn.addEventListener('click', () => {
-  if (useDemoMode) {
-    useDemoMode = false;
-    handleLogout();
-  } else {
-    auth.signOut();
-  }
-});
-
-auth.onAuthStateChanged(async (user) => {
-  if (user) {
-    handleLoginSuccess(user);
-  } else {
-    if (!useDemoMode) handleLogout();
-  }
-});
+signOutBtn.addEventListener('click', () => handleLogout());
 
 // --- Dashboard Init ---
 async function initDashboard() {
@@ -195,34 +164,19 @@ async function initDashboard() {
 
 // --- Work Items ---
 async function loadWorkItems() {
-  if (useDemoMode) {
-    const snap = demoDbGet('settings/workItems');
-    if (snap.exists) {
-      workItems = snap.data().items || [];
-    } else {
-      workItems = [...DEFAULT_WORK_ITEMS];
-      demoDbSet('settings/workItems', { items: workItems });
-    }
-    return;
-  }
-  const docRef = db.collection('settings').doc('workItems');
-  const snap = await docRef.get();
+  const snap = dbGet('settings/workItems');
   if (snap.exists) {
     workItems = snap.data().items || [];
   } else {
     workItems = [...DEFAULT_WORK_ITEMS];
-    await docRef.set({ items: workItems });
+    dbSet('settings/workItems', { items: workItems });
   }
 }
 
 async function saveWorkItems() {
   const inputs = workList.querySelectorAll('.work-item-input');
   workItems = Array.from(inputs).map(i => i.value.trim()).filter(v => v);
-  if (useDemoMode) {
-    demoDbSet('settings/workItems', { items: workItems });
-    return;
-  }
-  await db.collection('settings').doc('workItems').set({ items: workItems });
+  dbSet('settings/workItems', { items: workItems });
 }
 
 // --- Cells ---
@@ -238,46 +192,20 @@ function getCellId(block, floor, flatNum, workIndex) {
 async function loadAllCells() {
   cellsCache = {};
   const flats = getFlatNumbers(currentFloor);
-  if (useDemoMode) {
-    for (let wi = 0; wi < workItems.length; wi++) {
-      for (const flat of flats) {
-        const cellId = getCellId(currentBlock, currentFloor, flat, wi);
-        const snap = demoDbGet(`projects/vgrand/cells/${cellId}`);
-        if (snap.exists) {
-          cellsCache[cellId] = snap.data();
-        }
-      }
-    }
-    return;
-  }
-  const promises = [];
   for (let wi = 0; wi < workItems.length; wi++) {
     for (const flat of flats) {
       const cellId = getCellId(currentBlock, currentFloor, flat, wi);
-      promises.push(
-        db.collection('projects').doc('vgrand').collection('cells').doc(cellId).get()
-      );
+      const snap = dbGet(`projects/vgrand/cells/${cellId}`);
+      if (snap.exists) {
+        cellsCache[cellId] = snap.data();
+      }
     }
   }
-  const snaps = await Promise.all(promises);
-  snaps.forEach(snap => {
-    if (snap.exists) {
-      cellsCache[snap.id] = snap.data();
-    }
-  });
 }
 
 async function getCellData(cellId) {
   if (cellsCache[cellId]) return cellsCache[cellId];
-  if (useDemoMode) {
-    const snap = demoDbGet(`projects/vgrand/cells/${cellId}`);
-    if (snap.exists) {
-      cellsCache[cellId] = snap.data();
-      return snap.data();
-    }
-    return null;
-  }
-  const snap = await db.collection('projects').doc('vgrand').collection('cells').doc(cellId).get();
+  const snap = dbGet(`projects/vgrand/cells/${cellId}`);
   if (snap.exists) {
     cellsCache[cellId] = snap.data();
     return snap.data();
@@ -301,7 +229,7 @@ function getAutoRemark(color) {
 }
 
 async function saveCellStatus(cellId, color, workIndex, flatNum) {
-  const now = useDemoMode ? demoNow() : firebase.firestore.Timestamp.now();
+  const now = Date.now();
   const existing = await getCellData(cellId) || {};
   const timeline = existing.timeline || [];
   const oldRemarks = existing.remarks || '';
@@ -311,7 +239,7 @@ async function saveCellStatus(cellId, color, workIndex, flatNum) {
     status_label: color ? STATUS_LABELS[color] : 'Cleared',
     date: getTodayDate(),
     changed_by: currentUser.email,
-    timestamp: now.toMillis()
+    timestamp: now
   };
 
   timeline.push(entry);
@@ -340,26 +268,17 @@ async function saveCellStatus(cellId, color, workIndex, flatNum) {
     updated_by: currentUser.email
   };
 
-  if (useDemoMode) {
-    demoDbSet(`projects/vgrand/cells/${cellId}`, data, true);
-  } else {
-    await db.collection('projects').doc('vgrand').collection('cells').doc(cellId).set(data, { merge: true });
-  }
+  dbSet(`projects/vgrand/cells/${cellId}`, data, true);
   cellsCache[cellId] = { ...existing, ...data };
 }
 
 async function saveCellRemarks(cellId, remarks) {
-  const now = useDemoMode ? demoNow() : firebase.firestore.Timestamp.now();
   const payload = {
     remarks: remarks,
-    updated_at: now,
+    updated_at: Date.now(),
     updated_by: currentUser.email
   };
-  if (useDemoMode) {
-    demoDbSet(`projects/vgrand/cells/${cellId}`, payload, true);
-  } else {
-    await db.collection('projects').doc('vgrand').collection('cells').doc(cellId).set(payload, { merge: true });
-  }
+  dbSet(`projects/vgrand/cells/${cellId}`, payload, true);
   const existing = cellsCache[cellId] || {};
   cellsCache[cellId] = { ...existing, remarks };
 }
