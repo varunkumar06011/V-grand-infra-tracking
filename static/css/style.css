@@ -59,6 +59,16 @@ body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background:
 }
 .floor-tab.active { background: #3498db; color: #fff; }
 
+/* View tabs */
+.view-tabs {
+  display: flex; gap: 8px; margin-bottom: 16px; flex-wrap: wrap;
+}
+.view-tab {
+  padding: 8px 18px; border-radius: 4px; cursor: pointer;
+  background: #bdc3c7; border: none; color: #2c3e50; font-size: 1rem;
+}
+.view-tab.active { background: #9b59b6; color: #fff; }
+
 /* Legend */
 .legend {
   display: flex; gap: 20px; margin-bottom: 16px; align-items: center;
@@ -270,6 +280,52 @@ body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background:
 .summary-table td:nth-child(2) { text-align: center; width: 80px; font-weight: 600; }
 .summary-table td:nth-child(3) { width: 120px; color: #666; }
 
+/* Work View */
+.work-view-container { margin-top: 10px; }
+.work-view-section {
+  margin-bottom: 24px;
+  background: #fff;
+  border-radius: 8px;
+  overflow: hidden;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+}
+.section-header {
+  background: #3498db;
+  color: #fff;
+  padding: 12px 20px;
+  font-weight: 700;
+  font-size: 1.05rem;
+  letter-spacing: 0.5px;
+}
+.section-table {
+  width: 100%;
+  border-collapse: collapse;
+  min-width: 600px;
+}
+.section-table th {
+  background: #ecf0f1;
+  color: #2c3e50;
+  padding: 10px;
+  text-align: center;
+  font-weight: 600;
+  border-bottom: 2px solid #ddd;
+}
+.section-table th:first-child {
+  text-align: left;
+  min-width: 200px;
+}
+.section-table td {
+  border: 1px solid #eee;
+  padding: 8px;
+  text-align: center;
+  vertical-align: middle;
+}
+.section-table td:first-child {
+  text-align: left;
+  font-weight: 600;
+  background: #f8f9fa;
+}
+
 /* ========== Simple Mobile ========== */
 @media (max-width: 768px) {
   .auth-box { width: 92vw; padding: 28px 20px; }
@@ -283,4 +339,8 @@ body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background:
   .tracker-table { min-width: 100%; }
   .tracker-table th, .tracker-table td { padding: 6px 3px; font-size: 0.75rem; }
   .tracker-table th:first-child, .tracker-table td:first-child { min-width: 110px; }
+
+  .view-tab { padding: 6px 12px; font-size: 0.9rem; }
+  .section-header { font-size: 0.95rem; padding: 10px 14px; }
+  .section-table th, .section-table td { padding: 6px 3px; font-size: 0.75rem; }
 }

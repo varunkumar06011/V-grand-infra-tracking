@@ -29,6 +29,42 @@ const DEFAULT_WORK_ITEMS = [
   '2nd COAT PAINTING'
 ];
 
+const WORK_CATEGORIES = {
+  'CIVIL WORK': [
+    'Brick work', 'Lintel', 'Lanter', 'Mesh', 'Mesh & Brickwork NCC',
+    'Connections', 'Lift', 'Cupboards', 'Red Oxide Duraplus Primer',
+    'Red Oxide Duraplus Primer (2nd coat)', 'Bathroom Service Chargable'
+  ],
+  'ELECTRICAL & PLUMBING WORK': [
+    'Electrical pipe', 'Pipe & GI box', 'Wiring',
+    'Bathroom Chipped', 'Bathroom Geyser Pipe',
+    'Bathroom Geyser & Pipes', 'Sanitary Board & Nand',
+    'GC & Bath Fitting'
+  ],
+  'POP CEILING': [
+    'Pop bolster work', 'Pop ready work', 'Casing',
+    'Balloon PVC Box Fitting', 'Connections / Measurement'
+  ],
+  'PAINTING': [
+    'Colour Primer', 'Wall Care Plaster',
+    'Wall Care Slastoat', 'Wall Primer', 'Primer',
+    'Colour to Edge'
+  ],
+  'FLOORING': [
+    'Bathroom Wall Tiles', 'Tile Laying',
+    'Tile Cutting', 'Connections', 'Window Dhanis',
+    'Colour to Edge', 'Wedding Dhanis'
+  ]
+};
+
+const CORRIDORS = [
+  'Plaster', 'Mesh', 'Lanter', 'Wiring', 'Stains & Cleaning', 'Flooring'
+];
+
+const ELEVATION_WORK = [
+  'Marka', 'Elevation', 'Electrics', 'Wall Care', 'Texture'
+];
+
 const BLOCKS = ['A', 'B'];
 const FLOORS = [1, 2, 3, 4, 5];
 const FLATS_PER_FLOOR = 6;
@@ -70,6 +106,7 @@ let currentBlock = 'A';
 let currentFloor = 1;
 let workItems = [];
 let cellsCache = {};
+let currentView = 'flat';
 let selectedCellId = null;
 let selectedWorkIndex = null;
 let selectedFlatNum = null;
@@ -113,6 +150,7 @@ const demoLoginBtn = document.getElementById('demo-login');
 const summaryBlock = document.getElementById('summary-block');
 const summaryFloor = document.getElementById('summary-floor');
 const summaryBody = document.getElementById('summary-body');
+const workViewContainer = document.getElementById('work-view-container');
 
 // --- Auth ---
 let isRegister = false;
@@ -186,8 +224,12 @@ async function initDashboard() {
   await loadWorkItems();
   await loadAllCells();
   updateBlockClass();
-  renderTracker();
-  renderSummary();
+  if (currentView === 'work') {
+    renderWorkView();
+  } else {
+    renderTracker();
+    renderSummary();
+  }
   showLoading(false);
 }
 
@@ -218,8 +260,16 @@ function getCellId(block, floor, flatNum, workIndex) {
   return `${block}_floor${floor}_${flatNum}_${workIndex}`;
 }
 
+function getWorkViewCellId(block, floor, category, workIndex, flatNum) {
+  return `${block}_floor${floor}_${category}_${workIndex}_${flatNum}`;
+}
+
 async function loadAllCells() {
   cellsCache = {};
+  if (currentView === 'work') {
+    await loadWorkViewCells();
+    return;
+  }
   const flats = getFlatNumbers(currentFloor);
   for (let wi = 0; wi < workItems.length; wi++) {
     for (const flat of flats) {
@@ -228,6 +278,39 @@ async function loadAllCells() {
       if (snap.exists) {
         cellsCache[cellId] = snap.data();
       }
+    }
+  }
+}
+
+async function loadWorkViewCells() {
+  const flats = getFlatNumbers(currentFloor);
+  const categories = Object.keys(WORK_CATEGORIES);
+  for (const cat of categories) {
+    const items = WORK_CATEGORIES[cat];
+    for (let wi = 0; wi < items.length; wi++) {
+      for (const flat of flats) {
+        const cellId = getWorkViewCellId(currentBlock, currentFloor, cat, wi, flat);
+        const snap = dbGet(`projects/vgrand/cells/${cellId}`);
+        if (snap.exists) {
+          cellsCache[cellId] = snap.data();
+        }
+      }
+    }
+  }
+  // Corridors
+  for (let wi = 0; wi < CORRIDORS.length; wi++) {
+    const cellId = `${currentBlock}_floor${currentFloor}_corridor_${wi}`;
+    const snap = dbGet(`projects/vgrand/cells/${cellId}`);
+    if (snap.exists) {
+      cellsCache[cellId] = snap.data();
+    }
+  }
+  // Elevation Work
+  for (let wi = 0; wi < ELEVATION_WORK.length; wi++) {
+    const cellId = `${currentBlock}_floor${currentFloor}_elevation_${wi}`;
+    const snap = dbGet(`projects/vgrand/cells/${cellId}`);
+    if (snap.exists) {
+      cellsCache[cellId] = snap.data();
     }
   }
 }
@@ -314,6 +397,10 @@ async function saveCellRemarks(cellId, remarks) {
 
 // --- Rendering ---
 function renderTracker() {
+  document.querySelector('.tracker-wrapper').style.display = 'block';
+  document.getElementById('summary-panel').style.display = 'block';
+  workViewContainer.style.display = 'none';
+
   const flats = getFlatNumbers(currentFloor);
 
   // Header
@@ -358,14 +445,16 @@ function renderTracker() {
     btn.addEventListener('click', (e) => openStatusPopup(
       btn.dataset.cell,
       parseInt(btn.dataset.work),
-      parseInt(btn.dataset.flat)
+      parseInt(btn.dataset.flat),
+      null
     ));
   });
   trackerBody.querySelectorAll('.history-link').forEach(link => {
     link.addEventListener('click', (e) => openTimelineModal(
       link.dataset.cell,
       parseInt(link.dataset.work),
-      parseInt(link.dataset.flat)
+      parseInt(link.dataset.flat),
+      null
     ));
   });
   renderSummary();
@@ -413,6 +502,85 @@ function renderSummary() {
   summaryBody.innerHTML = html;
 }
 
+// --- Work View Rendering ---
+function renderWorkView() {
+  document.querySelector('.tracker-wrapper').style.display = 'none';
+  document.getElementById('summary-panel').style.display = 'none';
+  workViewContainer.style.display = 'block';
+
+  const flats = getFlatNumbers(currentFloor);
+  let html = '';
+
+  // 5 main categories
+  Object.keys(WORK_CATEGORIES).forEach(cat => {
+    const items = WORK_CATEGORIES[cat];
+    html += renderSectionTable(cat, items, flats, false);
+  });
+
+  // Corridors
+  html += renderSectionTable('CORRIDORS', CORRIDORS, ['P-004'], true);
+
+  // Elevation Work
+  html += renderSectionTable('ELEVATION WORK', ELEVATION_WORK, ['P-004'], true);
+
+  workViewContainer.innerHTML = html;
+
+  // Attach events
+  workViewContainer.querySelectorAll('.cell-btn').forEach(btn => {
+    btn.addEventListener('click', (e) => openStatusPopup(
+      btn.dataset.cell,
+      parseInt(btn.dataset.work),
+      isNaN(parseInt(btn.dataset.flat)) ? btn.dataset.flat : parseInt(btn.dataset.flat),
+      btn.dataset.workname
+    ));
+  });
+  workViewContainer.querySelectorAll('.history-link').forEach(link => {
+    link.addEventListener('click', (e) => openTimelineModal(
+      link.dataset.cell,
+      parseInt(link.dataset.work),
+      isNaN(parseInt(link.dataset.flat)) ? link.dataset.flat : parseInt(link.dataset.flat),
+      link.dataset.workname
+    ));
+  });
+}
+
+function renderSectionTable(title, items, columns, isSingleCol) {
+  let html = `<div class="work-view-section"><div class="section-header">${title}</div>`;
+  html += '<div style="overflow-x:auto;"><table class="section-table">';
+
+  // Header
+  html += '<thead><tr><th>S.No</th><th>Work Description</th>';
+  for (const col of columns) {
+    html += `<th>${col}</th>`;
+  }
+  html += '</tr></thead><tbody>';
+
+  // Rows
+  items.forEach((item, wi) => {
+    html += `<tr><td>${wi + 1}</td><td>${item}</td>`;
+    for (const col of columns) {
+      let cellId;
+      if (isSingleCol) {
+        const slug = title.toLowerCase().replace(/\s+/g, '_');
+        cellId = `${currentBlock}_floor${currentFloor}_${slug}_${wi}`;
+      } else {
+        cellId = getWorkViewCellId(currentBlock, currentFloor, title, wi, col);
+      }
+      const cell = cellsCache[cellId];
+      const color = cell && cell.color ? cell.color : null;
+      const colorClass = color ? color : '';
+      html += `<td>
+        <div class="cell-btn ${colorClass}" data-cell="${cellId}" data-work="${wi}" data-flat="${col}" data-workname="${item}"></div>
+        <span class="history-link" data-cell="${cellId}" data-work="${wi}" data-flat="${col}" data-workname="${item}">history</span>
+      </td>`;
+    }
+    html += '</tr>';
+  });
+
+  html += '</tbody></table></div></div>';
+  return html;
+}
+
 // --- Block / Floor Tabs ---
 document.querySelectorAll('.block-tab').forEach(tab => {
   tab.addEventListener('click', async () => {
@@ -422,7 +590,12 @@ document.querySelectorAll('.block-tab').forEach(tab => {
     updateBlockClass();
     showLoading(true);
     await loadAllCells();
-    renderTracker();
+    if (currentView === 'work') {
+      renderWorkView();
+    } else {
+      renderTracker();
+      renderSummary();
+    }
     showLoading(false);
   });
 });
@@ -434,20 +607,43 @@ document.querySelectorAll('.floor-tab').forEach(tab => {
     currentFloor = parseInt(tab.dataset.floor);
     showLoading(true);
     await loadAllCells();
-    renderTracker();
-    renderSummary();
+    if (currentView === 'work') {
+      renderWorkView();
+    } else {
+      renderTracker();
+      renderSummary();
+    }
+    showLoading(false);
+  });
+});
+
+// --- View Toggle ---
+document.querySelectorAll('.view-tab').forEach(tab => {
+  tab.addEventListener('click', async () => {
+    document.querySelectorAll('.view-tab').forEach(t => t.classList.remove('active'));
+    tab.classList.add('active');
+    currentView = tab.dataset.view;
+    showLoading(true);
+    await loadAllCells();
+    if (currentView === 'work') {
+      renderWorkView();
+    } else {
+      renderTracker();
+      renderSummary();
+    }
     showLoading(false);
   });
 });
 
 // --- Status Popup ---
-function openStatusPopup(cellId, workIndex, flatNum) {
+function openStatusPopup(cellId, workIndex, flatNum, workName = null) {
   selectedCellId = cellId;
   selectedWorkIndex = workIndex;
   selectedFlatNum = flatNum;
   selectedColor = null;
 
-  popupTitle.textContent = `Flat ${flatNum} - ${workItems[workIndex]}`;
+  const name = workName || workItems[workIndex] || 'Unknown';
+  popupTitle.textContent = `Flat ${flatNum} - ${name}`;
   popupSub.textContent = `${currentBlock} Block | ${currentFloor}${getOrdinal(currentFloor)} Floor`;
 
   const cell = cellsCache[cellId];
@@ -471,7 +667,8 @@ popupCancel.addEventListener('click', () => statusPopup.classList.remove('active
 popupClear.addEventListener('click', async () => {
   await saveCellStatus(selectedCellId, null, selectedWorkIndex, selectedFlatNum);
   statusPopup.classList.remove('active');
-  renderTracker();
+  if (currentView === 'work') renderWorkView();
+  else renderTracker();
 });
 
 popupSave.addEventListener('click', async () => {
@@ -479,16 +676,18 @@ popupSave.addEventListener('click', async () => {
     await saveCellStatus(selectedCellId, selectedColor, selectedWorkIndex, selectedFlatNum);
   }
   statusPopup.classList.remove('active');
-  renderTracker();
+  if (currentView === 'work') renderWorkView();
+  else renderTracker();
 });
 
 // --- Timeline Modal ---
-async function openTimelineModal(cellId, workIndex, flatNum) {
+async function openTimelineModal(cellId, workIndex, flatNum, workName = null) {
   selectedCellId = cellId;
   selectedWorkIndex = workIndex;
   selectedFlatNum = flatNum;
 
-  modalTitle.textContent = `Flat ${flatNum} - ${workItems[workIndex]}`;
+  const name = workName || workItems[workIndex] || 'Unknown';
+  modalTitle.textContent = `Flat ${flatNum} - ${name}`;
   modalSub.textContent = `${currentBlock} Block | ${currentFloor}${getOrdinal(currentFloor)} Floor`;
 
   const cell = await getCellData(cellId);
@@ -521,7 +720,8 @@ modalClose.addEventListener('click', () => timelineModal.classList.remove('activ
 modalSave.addEventListener('click', async () => {
   await saveCellRemarks(selectedCellId, modalRemarks.value.trim());
   timelineModal.classList.remove('active');
-  renderTracker();
+  if (currentView === 'work') renderWorkView();
+  else renderTracker();
 });
 
 // --- Settings Page ---
@@ -534,7 +734,8 @@ settingsBtn.addEventListener('click', () => {
 backBtn.addEventListener('click', () => {
   settingsPage.style.display = 'none';
   dashboard.style.display = 'block';
-  renderTracker();
+  if (currentView === 'work') renderWorkView();
+  else renderTracker();
 });
 
 function renderWorkList() {
