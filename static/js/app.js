@@ -17,6 +17,47 @@ const BLOCKS = ['A', 'B'];
 const FLOORS = [1, 2, 3, 4, 5];
 const FLATS_PER_FLOOR = 6;
 
+// Demo mode
+const DEMO_EMAIL = 'vgrand@123';
+const DEMO_PASSWORD = 'vgrand1234';
+let useDemoMode = false;
+
+// Pre-fill inputs
+document.addEventListener('DOMContentLoaded', () => {
+  emailInput.value = DEMO_EMAIL;
+  passwordInput.value = DEMO_PASSWORD;
+});
+
+function demoNow() {
+  return { toMillis: () => Date.now(), seconds: Math.floor(Date.now() / 1000) };
+}
+
+function demoDbGet(docPath) {
+  const key = 'vgrand_demo_' + docPath.replace(/\//g, '_');
+  const raw = localStorage.getItem(key);
+  if (raw) {
+    const data = JSON.parse(raw);
+    return { exists: true, data: () => data };
+  }
+  return { exists: false, data: () => null };
+}
+
+function demoDbSet(docPath, data, merge = false) {
+  const key = 'vgrand_demo_' + docPath.replace(/\//g, '_');
+  let existing = {};
+  const raw = localStorage.getItem(key);
+  if (raw) existing = JSON.parse(raw);
+  const merged = merge ? { ...existing, ...data } : { ...data };
+  localStorage.setItem(key, JSON.stringify(merged));
+}
+
+function demoAuthSignIn(email, password) {
+  if (email === DEMO_EMAIL && password === DEMO_PASSWORD) {
+    return { email: DEMO_EMAIL, uid: 'demo-user-1' };
+  }
+  throw new Error('Invalid demo credentials. Use vgrand@123 / vgrand1234');
+}
+
 // State
 let currentUser = null;
 let currentBlock = 'A';
@@ -62,6 +103,7 @@ const modalSave = document.getElementById('modal-save');
 const workList = document.getElementById('work-list');
 const addWorkBtn = document.getElementById('add-work-btn');
 const saveSettingsBtn = document.getElementById('save-settings-btn');
+const demoLoginBtn = document.getElementById('demo-login');
 
 const db = firebase.firestore();
 const auth = firebase.auth();
@@ -77,11 +119,32 @@ authToggle.addEventListener('click', () => {
   authError.textContent = '';
 });
 
+async function handleLoginSuccess(user) {
+  currentUser = user;
+  userEmail.textContent = user.email;
+  authScreen.style.display = 'none';
+  dashboard.style.display = 'block';
+  settingsPage.style.display = 'none';
+  await initDashboard();
+}
+
+function handleLogout() {
+  currentUser = null;
+  authScreen.style.display = 'flex';
+  dashboard.style.display = 'none';
+  settingsPage.style.display = 'none';
+}
+
 authSubmit.addEventListener('click', async () => {
   const email = emailInput.value.trim();
   const password = passwordInput.value.trim();
   authError.textContent = '';
   try {
+    if (email === DEMO_EMAIL && password === DEMO_PASSWORD) {
+      useDemoMode = true;
+      handleLoginSuccess(demoAuthSignIn(email, password));
+      return;
+    }
     if (isRegister) {
       await auth.createUserWithEmailAndPassword(email, password);
     } else {
@@ -92,21 +155,32 @@ authSubmit.addEventListener('click', async () => {
   }
 });
 
-signOutBtn.addEventListener('click', () => auth.signOut());
+demoLoginBtn.addEventListener('click', async () => {
+  emailInput.value = DEMO_EMAIL;
+  passwordInput.value = DEMO_PASSWORD;
+  authError.textContent = '';
+  try {
+    useDemoMode = true;
+    handleLoginSuccess(demoAuthSignIn(DEMO_EMAIL, DEMO_PASSWORD));
+  } catch (err) {
+    authError.textContent = err.message;
+  }
+});
+
+signOutBtn.addEventListener('click', () => {
+  if (useDemoMode) {
+    useDemoMode = false;
+    handleLogout();
+  } else {
+    auth.signOut();
+  }
+});
 
 auth.onAuthStateChanged(async (user) => {
   if (user) {
-    currentUser = user;
-    userEmail.textContent = user.email;
-    authScreen.style.display = 'none';
-    dashboard.style.display = 'block';
-    settingsPage.style.display = 'none';
-    await initDashboard();
+    handleLoginSuccess(user);
   } else {
-    currentUser = null;
-    authScreen.style.display = 'flex';
-    dashboard.style.display = 'none';
-    settingsPage.style.display = 'none';
+    if (!useDemoMode) handleLogout();
   }
 });
 
@@ -121,6 +195,16 @@ async function initDashboard() {
 
 // --- Work Items ---
 async function loadWorkItems() {
+  if (useDemoMode) {
+    const snap = demoDbGet('settings/workItems');
+    if (snap.exists) {
+      workItems = snap.data().items || [];
+    } else {
+      workItems = [...DEFAULT_WORK_ITEMS];
+      demoDbSet('settings/workItems', { items: workItems });
+    }
+    return;
+  }
   const docRef = db.collection('settings').doc('workItems');
   const snap = await docRef.get();
   if (snap.exists) {
@@ -134,6 +218,10 @@ async function loadWorkItems() {
 async function saveWorkItems() {
   const inputs = workList.querySelectorAll('.work-item-input');
   workItems = Array.from(inputs).map(i => i.value.trim()).filter(v => v);
+  if (useDemoMode) {
+    demoDbSet('settings/workItems', { items: workItems });
+    return;
+  }
   await db.collection('settings').doc('workItems').set({ items: workItems });
 }
 
@@ -150,6 +238,18 @@ function getCellId(block, floor, flatNum, workIndex) {
 async function loadAllCells() {
   cellsCache = {};
   const flats = getFlatNumbers(currentFloor);
+  if (useDemoMode) {
+    for (let wi = 0; wi < workItems.length; wi++) {
+      for (const flat of flats) {
+        const cellId = getCellId(currentBlock, currentFloor, flat, wi);
+        const snap = demoDbGet(`projects/vgrand/cells/${cellId}`);
+        if (snap.exists) {
+          cellsCache[cellId] = snap.data();
+        }
+      }
+    }
+    return;
+  }
   const promises = [];
   for (let wi = 0; wi < workItems.length; wi++) {
     for (const flat of flats) {
@@ -169,6 +269,14 @@ async function loadAllCells() {
 
 async function getCellData(cellId) {
   if (cellsCache[cellId]) return cellsCache[cellId];
+  if (useDemoMode) {
+    const snap = demoDbGet(`projects/vgrand/cells/${cellId}`);
+    if (snap.exists) {
+      cellsCache[cellId] = snap.data();
+      return snap.data();
+    }
+    return null;
+  }
   const snap = await db.collection('projects').doc('vgrand').collection('cells').doc(cellId).get();
   if (snap.exists) {
     cellsCache[cellId] = snap.data();
@@ -193,7 +301,7 @@ function getAutoRemark(color) {
 }
 
 async function saveCellStatus(cellId, color, workIndex, flatNum) {
-  const now = firebase.firestore.Timestamp.now();
+  const now = useDemoMode ? demoNow() : firebase.firestore.Timestamp.now();
   const existing = await getCellData(cellId) || {};
   const timeline = existing.timeline || [];
   const oldRemarks = existing.remarks || '';
@@ -224,16 +332,26 @@ async function saveCellStatus(cellId, color, workIndex, flatNum) {
     updated_by: currentUser.email
   };
 
-  await db.collection('projects').doc('vgrand').collection('cells').doc(cellId).set(data, { merge: true });
+  if (useDemoMode) {
+    demoDbSet(`projects/vgrand/cells/${cellId}`, data, true);
+  } else {
+    await db.collection('projects').doc('vgrand').collection('cells').doc(cellId).set(data, { merge: true });
+  }
   cellsCache[cellId] = { ...existing, ...data };
 }
 
 async function saveCellRemarks(cellId, remarks) {
-  await db.collection('projects').doc('vgrand').collection('cells').doc(cellId).set({
+  const now = useDemoMode ? demoNow() : firebase.firestore.Timestamp.now();
+  const payload = {
     remarks: remarks,
-    updated_at: firebase.firestore.Timestamp.now(),
+    updated_at: now,
     updated_by: currentUser.email
-  }, { merge: true });
+  };
+  if (useDemoMode) {
+    demoDbSet(`projects/vgrand/cells/${cellId}`, payload, true);
+  } else {
+    await db.collection('projects').doc('vgrand').collection('cells').doc(cellId).set(payload, { merge: true });
+  }
   const existing = cellsCache[cellId] || {};
   cellsCache[cellId] = { ...existing, remarks };
 }
