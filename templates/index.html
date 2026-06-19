@@ -26,60 +26,73 @@
 <div id="dashboard">
   <div class="top-bar">
     <div class="logo">V Grand Infra</div>
-    <div class="top-bar-center">
+    <div class="top-bar-center" id="block-tabs-container">
       <button class="block-tab active" data-block="A">A Block</button>
       <button class="block-tab" data-block="B">B Block</button>
     </div>
     <div class="top-bar-right">
       <span id="user-email"></span>
+      <button id="back-to-ventures" style="display:none;">&larr; Ventures</button>
       <button id="settings-btn">Settings</button>
       <button id="sign-out-btn">Sign Out</button>
     </div>
   </div>
 
-  <div class="view-tabs" id="view-tabs">
-    <button class="view-tab active" data-view="flat">Flat View</button>
-    <button class="view-tab" data-view="work">Work View</button>
-    <button class="view-tab" data-view="super">Super Structure</button>
+  <!-- Breadcrumb -->
+  <div class="breadcrumb-bar" id="breadcrumb-bar" style="display:none;"></div>
+
+  <!-- Ventures Dashboard -->
+  <div class="ventures-dashboard" id="ventures-dashboard" style="display:none;">
+    <h2 class="vd-title">Your Ventures</h2>
+    <div class="ventures-grid" id="ventures-grid"></div>
   </div>
 
-  <div class="floor-tabs" id="floor-tabs">
-    <button class="floor-tab active" data-floor="1">1st Floor</button>
-    <button class="floor-tab" data-floor="2">2nd Floor</button>
-    <button class="floor-tab" data-floor="3">3rd Floor</button>
-    <button class="floor-tab" data-floor="4">4th Floor</button>
-    <button class="floor-tab" data-floor="5">5th Floor</button>
-  </div>
+  <!-- Venture Tracker -->
+  <div class="venture-tracker" id="venture-tracker">
+    <div class="view-tabs" id="view-tabs">
+      <button class="view-tab active" data-view="flat">Flat View</button>
+      <button class="view-tab" data-view="work">Work View</button>
+      <button class="view-tab" data-view="super">Super Structure</button>
+    </div>
 
-  <div class="legend">
-    <span class="legend-item"><span class="legend-dot red"></span> Yet to start</span>
-    <span class="legend-item"><span class="legend-dot yellow"></span> In progress</span>
-    <span class="legend-item"><span class="legend-dot blue"></span> Patch work / pending</span>
-    <span class="legend-item"><span class="legend-dot green"></span> Completed</span>
-    <span class="legend-item"><span class="legend-dot null"></span> No status</span>
-  </div>
+    <div class="floor-tabs" id="floor-tabs">
+      <button class="floor-tab active" data-floor="1">1st Floor</button>
+      <button class="floor-tab" data-floor="2">2nd Floor</button>
+      <button class="floor-tab" data-floor="3">3rd Floor</button>
+      <button class="floor-tab" data-floor="4">4th Floor</button>
+      <button class="floor-tab" data-floor="5">5th Floor</button>
+    </div>
 
-  <div class="tracker-wrapper">
-    <table class="tracker-table" id="tracker-table">
-      <thead id="tracker-head"></thead>
-      <tbody id="tracker-body"></tbody>
-    </table>
-  </div>
+    <div class="legend">
+      <span class="legend-item"><span class="legend-dot red"></span> Yet to start</span>
+      <span class="legend-item"><span class="legend-dot yellow"></span> In progress</span>
+      <span class="legend-item"><span class="legend-dot blue"></span> Patch work / pending</span>
+      <span class="legend-item"><span class="legend-dot green"></span> Completed</span>
+      <span class="legend-item"><span class="legend-dot null"></span> No status</span>
+    </div>
 
-  <div class="summary-panel" id="summary-panel">
-    <h3>Flat Summary - <span id="summary-block">A</span> Block - <span id="summary-floor">1st</span> Floor</h3>
-    <table class="summary-table" id="summary-table">
-      <thead>
-        <tr><th>S.NO</th><th>FLAT NO</th><th>DATE</th><th>REMARKS</th></tr>
-      </thead>
-      <tbody id="summary-body"></tbody>
-    </table>
-  </div>
+    <div class="tracker-wrapper">
+      <table class="tracker-table" id="tracker-table">
+        <thead id="tracker-head"></thead>
+        <tbody id="tracker-body"></tbody>
+      </table>
+    </div>
 
-  <div class="work-view-container" id="work-view-container" style="display:none;"></div>
+    <div class="summary-panel" id="summary-panel">
+      <h3>Flat Summary - <span id="summary-block">A</span> Block - <span id="summary-floor">1st</span> Floor</h3>
+      <table class="summary-table" id="summary-table">
+        <thead>
+          <tr><th>S.NO</th><th>FLAT NO</th><th>DATE</th><th>REMARKS</th></tr>
+        </thead>
+        <tbody id="summary-body"></tbody>
+      </table>
+    </div>
 
-  <div class="superstructure-container" id="superstructure-container" style="display:none;">
-    <div class="ss-grid" id="ss-grid"></div>
+    <div class="work-view-container" id="work-view-container" style="display:none;"></div>
+
+    <div class="superstructure-container" id="superstructure-container" style="display:none;">
+      <div class="ss-grid" id="ss-grid"></div>
+    </div>
   </div>
 </div>
 

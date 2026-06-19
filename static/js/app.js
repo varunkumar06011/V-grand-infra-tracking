@@ -91,9 +91,40 @@ const BLOCKS = ['A', 'B'];
 const FLOORS = [1, 2, 3, 4, 5];
 const FLATS_PER_FLOOR = 6;
 
+const DEFAULT_VENTURES = [
+  {
+    id: 'elite',
+    name: 'ELITE',
+    blocks: [
+      { id: 'A', name: 'A Block', floors: 5, flats_per_floor: 6 },
+      { id: 'B', name: 'B Block', floors: 5, flats_per_floor: 6 },
+      { id: 'CH', name: 'Club House', floors: 1, flats_per_floor: 4 }
+    ]
+  },
+  {
+    id: 'tripura',
+    name: 'TRIPURA',
+    blocks: [
+      { id: 'A', name: 'A Block', floors: 5, flats_per_floor: 6 },
+      { id: 'B', name: 'B Block', floors: 5, flats_per_floor: 6 }
+    ]
+  }
+];
+
 const LOGIN_EMAIL = 'vgrand@123';
 const LOGIN_PASSWORD = 'vgrand1234';
 const APP_VERSION = '2';
+
+// Venture-aware DB helpers
+function vDbGet(subPath) {
+  if (!currentVenture) return dbGet(subPath);
+  return dbGet(`ventures/${currentVenture.id}/${subPath}`);
+}
+
+function vDbSet(subPath, data, merge = false) {
+  if (!currentVenture) return dbSet(subPath, data, merge);
+  return dbSet(`ventures/${currentVenture.id}/${subPath}`, data, merge);
+}
 
 // Version check: if app updated, clear stored work items so new defaults load
 const storedVersion = localStorage.getItem('vgrand_app_version');
@@ -124,6 +155,8 @@ function dbSet(docPath, data, merge = false) {
 
 // State
 let currentUser = null;
+let currentVenture = null;
+let ventures = [];
 let currentBlock = 'A';
 let currentFloor = 1;
 let workItems = [];
@@ -174,6 +207,13 @@ const summaryFloor = document.getElementById('summary-floor');
 const summaryBody = document.getElementById('summary-body');
 const workViewContainer = document.getElementById('work-view-container');
 const ssGrid = document.getElementById('ss-grid');
+const venturesDashboard = document.getElementById('ventures-dashboard');
+const venturesGrid = document.getElementById('ventures-grid');
+const ventureTracker = document.getElementById('venture-tracker');
+const backToVenturesBtn = document.getElementById('back-to-ventures');
+const breadcrumbBar = document.getElementById('breadcrumb-bar');
+const blockTabsContainer = document.getElementById('block-tabs-container');
+const floorTabsContainer = document.getElementById('floor-tabs-container');
 
 // --- Auth ---
 let isRegister = false;
@@ -198,7 +238,9 @@ async function handleLoginSuccess(email) {
   authScreen.style.display = 'none';
   dashboard.style.display = 'block';
   settingsPage.style.display = 'none';
-  await initDashboard();
+  await seedDefaultVentures();
+  await loadVentures();
+  renderVentureDashboard();
 }
 
 function handleLogout() {
@@ -206,6 +248,7 @@ function handleLogout() {
   authScreen.style.display = 'flex';
   dashboard.style.display = 'none';
   settingsPage.style.display = 'none';
+  currentVenture = null;
 }
 
 function checkLogin(email, password) {
@@ -260,19 +303,19 @@ async function initDashboard() {
 
 // --- Work Items ---
 async function loadWorkItems() {
-  const snap = dbGet('settings/workItems');
+  const snap = vDbGet('settings/workItems');
   if (snap.exists) {
     workItems = snap.data().items || [];
   } else {
     workItems = [...DEFAULT_WORK_ITEMS];
-    dbSet('settings/workItems', { items: workItems });
+    vDbSet('settings/workItems', { items: workItems });
   }
 }
 
 async function saveWorkItems() {
   const inputs = workList.querySelectorAll('.work-item-input');
   workItems = Array.from(inputs).map(i => i.value.trim()).filter(v => v);
-  dbSet('settings/workItems', { items: workItems });
+  vDbSet('settings/workItems', { items: workItems });
 }
 
 // --- Cells ---
@@ -303,7 +346,7 @@ async function loadAllCells() {
   for (let wi = 0; wi < workItems.length; wi++) {
     for (const flat of flats) {
       const cellId = getCellId(currentBlock, currentFloor, flat, wi);
-      const snap = dbGet(`projects/vgrand/cells/${cellId}`);
+      const snap = vDbGet(`cells/${cellId}`);
       if (snap.exists) {
         cellsCache[cellId] = snap.data();
       }
@@ -319,7 +362,7 @@ async function loadWorkViewCells() {
     for (let wi = 0; wi < items.length; wi++) {
       for (const flat of flats) {
         const cellId = getWorkViewCellId(currentBlock, currentFloor, cat, wi, flat);
-        const snap = dbGet(`projects/vgrand/cells/${cellId}`);
+        const snap = vDbGet(`cells/${cellId}`);
         if (snap.exists) {
           cellsCache[cellId] = snap.data();
         }
@@ -329,7 +372,7 @@ async function loadWorkViewCells() {
   // Corridors
   for (let wi = 0; wi < CORRIDORS.length; wi++) {
     const cellId = `${currentBlock}_floor${currentFloor}_corridor_${wi}`;
-    const snap = dbGet(`projects/vgrand/cells/${cellId}`);
+    const snap = vDbGet(`cells/${cellId}`);
     if (snap.exists) {
       cellsCache[cellId] = snap.data();
     }
@@ -337,7 +380,7 @@ async function loadWorkViewCells() {
   // Elevation Work
   for (let wi = 0; wi < ELEVATION_WORK.length; wi++) {
     const cellId = `${currentBlock}_floor${currentFloor}_elevation_${wi}`;
-    const snap = dbGet(`projects/vgrand/cells/${cellId}`);
+    const snap = vDbGet(`cells/${cellId}`);
     if (snap.exists) {
       cellsCache[cellId] = snap.data();
     }
@@ -348,7 +391,7 @@ async function loadSuperCells() {
   for (const block of BLOCKS) {
     for (let wi = 0; wi < SUPER_STRUCTURE_ITEMS.length; wi++) {
       const cellId = `superstructure_${block}_${wi}`;
-      const snap = dbGet(`projects/vgrand/cells/${cellId}`);
+      const snap = vDbGet(`superstructure/${cellId}`);
       if (snap.exists) {
         cellsCache[cellId] = snap.data();
       }
@@ -396,13 +439,17 @@ async function saveSuperStatus(block, workIndex, status) {
     updated_by: currentUser.email
   };
 
-  dbSet(`projects/vgrand/cells/${cellId}`, data, true);
+  vDbSet(`superstructure/${cellId}`, data, true);
   cellsCache[cellId] = { ...existing, ...data };
 }
 
 async function getCellData(cellId) {
   if (cellsCache[cellId]) return cellsCache[cellId];
-  const snap = dbGet(`projects/vgrand/cells/${cellId}`);
+  // Try cells path first, then superstructure
+  let snap = vDbGet(`cells/${cellId}`);
+  if (!snap.exists) {
+    snap = vDbGet(`superstructure/${cellId}`);
+  }
   if (snap.exists) {
     cellsCache[cellId] = snap.data();
     return snap.data();
@@ -423,6 +470,176 @@ function getAutoRemark(color) {
     case 'yellow': return `Work started on ${date}`;
     default: return '';
   }
+}
+
+// --- Venture Management ---
+async function seedDefaultVentures() {
+  const snap = dbGet('ventures');
+  if (snap.exists && snap.data().list && snap.data().list.length > 0) return;
+
+  const venturesList = DEFAULT_VENTURES.map(v => ({
+    id: v.id,
+    name: v.name,
+    blocks: v.blocks,
+    created_by: currentUser ? currentUser.email : 'system',
+    created_at: Date.now()
+  }));
+  dbSet('ventures', { list: venturesList });
+
+  // Seed work items for each venture
+  for (const v of DEFAULT_VENTURES) {
+    vDbSet.call({ id: v.id }, 'settings/workItems', { items: [...DEFAULT_WORK_ITEMS] });
+  }
+}
+
+async function loadVentures() {
+  const snap = dbGet('ventures');
+  if (snap.exists) {
+    ventures = snap.data().list || [];
+  } else {
+    ventures = [];
+  }
+}
+
+function renderVentureDashboard() {
+  // Hide tracker, show dashboard
+  venturesDashboard.style.display = 'block';
+  ventureTracker.style.display = 'none';
+  backToVenturesBtn.style.display = 'none';
+  breadcrumbBar.style.display = 'none';
+  document.querySelector('.top-bar-center').style.display = 'flex';
+
+  let html = '';
+  ventures.forEach(v => {
+    const blockNames = v.blocks.map(b => b.name).join(', ');
+    html += `
+      <div class="venture-card" data-venture="${v.id}">
+        <h3>${v.name}</h3>
+        <p class="venture-blocks">${blockNames}</p>
+      </div>
+    `;
+  });
+  html += `
+    <div class="venture-card add-venture" id="add-venture-card">
+      <h3>+ Add Venture</h3>
+      <p>Create new project</p>
+    </div>
+  `;
+  venturesGrid.innerHTML = html;
+
+  // Attach click events
+  venturesGrid.querySelectorAll('.venture-card[data-venture]').forEach(card => {
+    card.addEventListener('click', () => openVenture(card.dataset.venture));
+  });
+}
+
+function openVenture(ventureId) {
+  const venture = ventures.find(v => v.id === ventureId);
+  if (!venture) return;
+  currentVenture = venture;
+  currentBlock = venture.blocks[0].id;
+  currentFloor = 1;
+  currentView = 'flat';
+
+  // Hide dashboard, show tracker
+  venturesDashboard.style.display = 'none';
+  ventureTracker.style.display = 'block';
+  backToVenturesBtn.style.display = 'inline-block';
+  breadcrumbBar.style.display = 'flex';
+
+  // Update block tabs
+  renderBlockTabs(venture.blocks);
+
+  // Update floor tabs
+  renderFloorTabs();
+
+  // Reset view tabs
+  document.querySelectorAll('.view-tab').forEach(t => t.classList.remove('active'));
+  document.querySelector('.view-tab[data-view="flat"]').classList.add('active');
+
+  updateBreadcrumb();
+  initDashboard();
+}
+
+function renderBlockTabs(blocks) {
+  let html = '';
+  blocks.forEach((b, idx) => {
+    html += `<button class="block-tab ${idx === 0 ? 'active' : ''}" data-block="${b.id}">${b.name}</button>`;
+  });
+  blockTabsContainer.innerHTML = html;
+
+  // Re-attach events
+  blockTabsContainer.querySelectorAll('.block-tab').forEach(tab => {
+    tab.addEventListener('click', async () => {
+      blockTabsContainer.querySelectorAll('.block-tab').forEach(t => t.classList.remove('active'));
+      tab.classList.add('active');
+      currentBlock = tab.dataset.block;
+      showLoading(true);
+      await loadAllCells();
+      if (currentView === 'work') {
+        renderWorkView();
+      } else if (currentView === 'super') {
+        renderSuperStructure();
+      } else {
+        renderTracker();
+        renderSummary();
+      }
+      updateBreadcrumb();
+      showLoading(false);
+    });
+  });
+}
+
+function renderFloorTabs() {
+  const block = currentVenture.blocks.find(b => b.id === currentBlock);
+  const numFloors = block ? block.floors : 5;
+  let html = '';
+  for (let f = 1; f <= numFloors; f++) {
+    const active = f === currentFloor ? 'active' : '';
+    html += `<button class="floor-tab ${active}" data-floor="${f}">${getOrdinalText(f)} Floor</button>`;
+  }
+  floorTabsContainer.innerHTML = html;
+
+  // Re-attach events
+  floorTabsContainer.querySelectorAll('.floor-tab').forEach(tab => {
+    tab.addEventListener('click', async () => {
+      floorTabsContainer.querySelectorAll('.floor-tab').forEach(t => t.classList.remove('active'));
+      tab.classList.add('active');
+      currentFloor = parseInt(tab.dataset.floor);
+      showLoading(true);
+      await loadAllCells();
+      if (currentView === 'work') {
+        renderWorkView();
+      } else if (currentView === 'super') {
+        renderSuperStructure();
+      } else {
+        renderTracker();
+        renderSummary();
+      }
+      updateBreadcrumb();
+      showLoading(false);
+    });
+  });
+}
+
+function updateBreadcrumb() {
+  const blockName = currentVenture.blocks.find(b => b.id === currentBlock)?.name || currentBlock;
+  const viewName = currentView === 'flat' ? 'Flat View' : currentView === 'work' ? 'Work View' : 'Super Structure';
+  breadcrumbBar.innerHTML = `
+    <span class="bc-home" id="bc-home">Home</span>
+    <span class="bc-sep">&gt;</span>
+    <span class="bc-venture">${currentVenture.name}</span>
+    <span class="bc-sep">&gt;</span>
+    <span class="bc-block">${blockName}</span>
+    <span class="bc-sep">&gt;</span>
+    <span class="bc-floor">${getOrdinalText(currentFloor)} Floor</span>
+    <span class="bc-sep">&gt;</span>
+    <span class="bc-view">${viewName}</span>
+  `;
+  document.getElementById('bc-home').addEventListener('click', () => {
+    currentVenture = null;
+    renderVentureDashboard();
+  });
 }
 
 async function saveCellStatus(cellId, color, workIndex, flatNum) {
@@ -465,7 +682,7 @@ async function saveCellStatus(cellId, color, workIndex, flatNum) {
     updated_by: currentUser.email
   };
 
-  dbSet(`projects/vgrand/cells/${cellId}`, data, true);
+  vDbSet(`cells/${cellId}`, data, true);
   cellsCache[cellId] = { ...existing, ...data };
 }
 
@@ -475,7 +692,7 @@ async function saveCellRemarks(cellId, remarks) {
     updated_at: Date.now(),
     updated_by: currentUser.email
   };
-  dbSet(`projects/vgrand/cells/${cellId}`, payload, true);
+  vDbSet(`cells/${cellId}`, payload, true);
   const existing = cellsCache[cellId] || {};
   cellsCache[cellId] = { ...existing, remarks };
 }
@@ -741,45 +958,53 @@ function renderSectionTable(title, items, columns, isSingleCol) {
   return html;
 }
 
-// --- Block / Floor Tabs ---
-document.querySelectorAll('.block-tab').forEach(tab => {
-  tab.addEventListener('click', async () => {
-    document.querySelectorAll('.block-tab').forEach(t => t.classList.remove('active'));
-    tab.classList.add('active');
-    currentBlock = tab.dataset.block;
-    updateBlockClass();
-    showLoading(true);
-    await loadAllCells();
-    if (currentView === 'work') {
-      renderWorkView();
-    } else if (currentView === 'super') {
-      renderSuperStructure();
-    } else {
-      renderTracker();
-      renderSummary();
-    }
-    showLoading(false);
+// --- Block / Floor Tabs (static fallback + dynamic handlers inside venture context) ---
+function attachStaticTabListeners() {
+  document.querySelectorAll('.block-tab').forEach(tab => {
+    tab.addEventListener('click', async () => {
+      document.querySelectorAll('.block-tab').forEach(t => t.classList.remove('active'));
+      tab.classList.add('active');
+      currentBlock = tab.dataset.block;
+      updateBlockClass();
+      showLoading(true);
+      await loadAllCells();
+      if (currentView === 'work') {
+        renderWorkView();
+      } else if (currentView === 'super') {
+        renderSuperStructure();
+      } else {
+        renderTracker();
+        renderSummary();
+      }
+      if (currentVenture) {
+        renderFloorTabs();
+        updateBreadcrumb();
+      }
+      showLoading(false);
+    });
   });
-});
 
-document.querySelectorAll('.floor-tab').forEach(tab => {
-  tab.addEventListener('click', async () => {
-    document.querySelectorAll('.floor-tab').forEach(t => t.classList.remove('active'));
-    tab.classList.add('active');
-    currentFloor = parseInt(tab.dataset.floor);
-    showLoading(true);
-    await loadAllCells();
-    if (currentView === 'work') {
-      renderWorkView();
-    } else if (currentView === 'super') {
-      renderSuperStructure();
-    } else {
-      renderTracker();
-      renderSummary();
-    }
-    showLoading(false);
+  document.querySelectorAll('.floor-tab').forEach(tab => {
+    tab.addEventListener('click', async () => {
+      document.querySelectorAll('.floor-tab').forEach(t => t.classList.remove('active'));
+      tab.classList.add('active');
+      currentFloor = parseInt(tab.dataset.floor);
+      showLoading(true);
+      await loadAllCells();
+      if (currentView === 'work') {
+        renderWorkView();
+      } else if (currentView === 'super') {
+        renderSuperStructure();
+      } else {
+        renderTracker();
+        renderSummary();
+      }
+      if (currentVenture) updateBreadcrumb();
+      showLoading(false);
+    });
   });
-});
+}
+attachStaticTabListeners();
 
 // --- View Toggle ---
 document.querySelectorAll('.view-tab').forEach(tab => {
@@ -797,9 +1022,18 @@ document.querySelectorAll('.view-tab').forEach(tab => {
       renderTracker();
       renderSummary();
     }
+    if (currentVenture) updateBreadcrumb();
     showLoading(false);
   });
 });
+
+// --- Back to Ventures ---
+if (backToVenturesBtn) {
+  backToVenturesBtn.addEventListener('click', () => {
+    currentVenture = null;
+    renderVentureDashboard();
+  });
+}
 
 // --- Status Popup ---
 function openStatusPopup(cellId, workIndex, flatNum, workName = null) {
