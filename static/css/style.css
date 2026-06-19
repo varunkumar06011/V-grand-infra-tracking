@@ -326,6 +326,106 @@ body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background:
   background: #f8f9fa;
 }
 
+/* Super Structure View */
+.superstructure-container { margin-top: 10px; }
+.ss-grid {
+  display: flex;
+  gap: 16px;
+}
+.ss-block {
+  flex: 1;
+  background: #fff;
+  border-radius: 8px;
+  overflow: hidden;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+  min-width: 0;
+}
+.ss-block-title {
+  background: #2c3e50;
+  color: #fff;
+  padding: 12px 16px;
+  font-weight: 700;
+  font-size: 1.1rem;
+  text-align: center;
+}
+.ss-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.88rem;
+}
+.ss-table th {
+  padding: 8px 6px;
+  text-align: center;
+  font-weight: 600;
+  border-bottom: 2px solid #ddd;
+  font-size: 0.8rem;
+}
+.ss-table th:first-child {
+  width: 40px;
+  background: #ecf0f1;
+}
+.ss-table th:nth-child(2) {
+  text-align: left;
+  min-width: 180px;
+  background: #ecf0f1;
+}
+.ss-table th:nth-child(3) { background: #e74c3c; color: #fff; }
+.ss-table th:nth-child(4) { background: #f1c40f; color: #2c3e50; }
+.ss-table th:nth-child(5) { background: #3498db; color: #fff; }
+.ss-table th:nth-child(6) { background: #2ecc71; color: #fff; }
+.block-b .ss-table th:nth-child(3) { background: #8B0000; }
+.block-b .ss-table th:nth-child(4) { background: #B8860B; }
+.block-b .ss-table th:nth-child(5) { background: #00008B; }
+.block-b .ss-table th:nth-child(6) { background: #006400; }
+
+.ss-table td {
+  border: 1px solid #eee;
+  padding: 6px 4px;
+  text-align: center;
+  vertical-align: middle;
+}
+.ss-table td:first-child {
+  background: #f8f9fa;
+  font-weight: 600;
+  color: #666;
+}
+.ss-table td:nth-child(2) {
+  text-align: left;
+  font-weight: 600;
+  padding-left: 10px;
+}
+.ss-cell {
+  width: 36px;
+  height: 28px;
+  border-radius: 4px;
+  border: 2px solid #ccc;
+  cursor: pointer;
+  display: inline-block;
+  background: #fff;
+  transition: transform 0.1s;
+}
+.ss-cell:hover { transform: scale(1.15); }
+
+/* A Block active */
+.block-a .ss-cell.active-red { background: #FF0000; border-color: #CC0000; }
+.block-a .ss-cell.active-yellow { background: #FFD700; border-color: #CCAA00; }
+.block-a .ss-cell.active-blue { background: #4169E1; border-color: #27408B; }
+.block-a .ss-cell.active-green { background: #32CD32; border-color: #228B22; }
+/* B Block active */
+.block-b .ss-cell.active-red { background: #8B0000; border-color: #550000; }
+.block-b .ss-cell.active-yellow { background: #B8860B; border-color: #8B6508; }
+.block-b .ss-cell.active-blue { background: #00008B; border-color: #000055; }
+.block-b .ss-cell.active-green { background: #006400; border-color: #003300; }
+
+.ss-history {
+  font-size: 0.65rem;
+  color: #3498db;
+  cursor: pointer;
+  text-decoration: underline;
+  display: block;
+  margin-top: 2px;
+}
+
 /* ========== Simple Mobile ========== */
 @media (max-width: 768px) {
   .auth-box { width: 92vw; padding: 28px 20px; }
@@ -343,4 +443,9 @@ body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background:
   .view-tab { padding: 6px 12px; font-size: 0.9rem; }
   .section-header { font-size: 0.95rem; padding: 10px 14px; }
   .section-table th, .section-table td { padding: 6px 3px; font-size: 0.75rem; }
+
+  .ss-grid { flex-direction: column; }
+  .ss-table { font-size: 0.75rem; }
+  .ss-table th:nth-child(2) { min-width: 120px; }
+  .ss-cell { width: 28px; height: 22px; }
 }

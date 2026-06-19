@@ -65,6 +65,28 @@ const ELEVATION_WORK = [
   'Marka', 'Elevation', 'Electrics', 'Wall Care', 'Texture'
 ];
 
+const SUPER_STRUCTURE_ITEMS = [
+  'Site Preparation', 'Excavation', 'Marking', 'Piles', 'Piles Concrete',
+  'Pile Caps', 'Plinth Beam', 'Plinth Wall', 'Filling', '40mm Bed',
+  'Sunken Tank', 'Columns for 1st Slab', 'Slab Shuttering for 1st Slab',
+  'Bar Bending for 1st Slab', 'Electrical Pipes', '1st Slab Casting',
+  'Columns for 2nd Slab', 'Shuttering for 2nd Slab', 'Bar Bending for 2nd Slab',
+  'Electrical Pipes', '2nd Slab Casting', 'Columns for 3rd Slab',
+  'Slab Shuttering for 3rd Slab', 'Bar Bending for 3rd Slab', 'Electrical Pipes',
+  '3rd Slab Casting', 'Columns for 4th Slab', 'Slab Shuttering for 4th Slab',
+  'Bar Bending for 4th Slab', 'Electrical Pipes', '4th Slab Casting',
+  'Columns for 5th Slab', 'Slab Shuttering for 5th Slab', 'Bar Bending for 5th Slab',
+  'Electrical Pipes', '5th Slab Casting', 'Columns for 6th Slab',
+  'Slab Shuttering for 6th Slab', 'Bar Bending for 6th Slab', 'Electrical Pipes',
+  '6th Slab Casting', 'Columns for Lift Tank & Stairs', 'Shuttering for Above',
+  'Slab Casting', 'Water Tank Bar Bending', 'Water Tank NCC',
+  'Elevation Scaffolding', 'Elevation Mess & Packing', 'Elevation Brick Work',
+  'Elevation (Plastering)', 'Electrical SWM & Plumbing Outside Lines',
+  '1M CH Work', 'Scaffolding Removal', 'Patch Work', 'Elevation Texture',
+  'Elevation Primer', 'Elevation Paint 1st Coat', 'Compound Wall Columns & Beam',
+  'Compound Wall Brick & Plastering', 'Compound Wall Paint', 'Final Coat'
+];
+
 const BLOCKS = ['A', 'B'];
 const FLOORS = [1, 2, 3, 4, 5];
 const FLATS_PER_FLOOR = 6;
@@ -151,6 +173,7 @@ const summaryBlock = document.getElementById('summary-block');
 const summaryFloor = document.getElementById('summary-floor');
 const summaryBody = document.getElementById('summary-body');
 const workViewContainer = document.getElementById('work-view-container');
+const ssGrid = document.getElementById('ss-grid');
 
 // --- Auth ---
 let isRegister = false;
@@ -226,6 +249,8 @@ async function initDashboard() {
   updateBlockClass();
   if (currentView === 'work') {
     renderWorkView();
+  } else if (currentView === 'super') {
+    renderSuperStructure();
   } else {
     renderTracker();
     renderSummary();
@@ -268,6 +293,10 @@ async function loadAllCells() {
   cellsCache = {};
   if (currentView === 'work') {
     await loadWorkViewCells();
+    return;
+  }
+  if (currentView === 'super') {
+    await loadSuperCells();
     return;
   }
   const flats = getFlatNumbers(currentFloor);
@@ -313,6 +342,62 @@ async function loadWorkViewCells() {
       cellsCache[cellId] = snap.data();
     }
   }
+}
+
+async function loadSuperCells() {
+  for (const block of BLOCKS) {
+    for (let wi = 0; wi < SUPER_STRUCTURE_ITEMS.length; wi++) {
+      const cellId = `superstructure_${block}_${wi}`;
+      const snap = dbGet(`projects/vgrand/cells/${cellId}`);
+      if (snap.exists) {
+        cellsCache[cellId] = snap.data();
+      }
+    }
+  }
+}
+
+async function saveSuperStatus(block, workIndex, status) {
+  const cellId = `superstructure_${block}_${workIndex}`;
+  const now = Date.now();
+  const existing = await getCellData(cellId) || {};
+  const timeline = existing.timeline || [];
+  const oldRemarks = existing.remarks || '';
+
+  const entry = {
+    status: status,
+    status_label: status ? STATUS_LABELS[status] : 'Cleared',
+    date: getTodayDate(),
+    changed_by: currentUser.email,
+    timestamp: now
+  };
+  timeline.push(entry);
+
+  // Strip old auto-remarks before adding new one
+  const autoPatterns = ['Patch work started on', 'Completed on', 'Work started on'];
+  let cleanedRemarks = oldRemarks
+    .split('\n')
+    .filter(line => !autoPatterns.some(p => line.trim().startsWith(p)))
+    .join('\n')
+    .trim();
+
+  let newRemarks = cleanedRemarks;
+  if (status) {
+    const auto = getAutoRemark(status);
+    if (auto) {
+      newRemarks = cleanedRemarks ? cleanedRemarks + '\n' + auto : auto;
+    }
+  }
+
+  const data = {
+    status: status || null,
+    timeline: timeline,
+    remarks: newRemarks,
+    updated_at: now,
+    updated_by: currentUser.email
+  };
+
+  dbSet(`projects/vgrand/cells/${cellId}`, data, true);
+  cellsCache[cellId] = { ...existing, ...data };
 }
 
 async function getCellData(cellId) {
@@ -505,6 +590,68 @@ function renderSummary() {
   summaryBody.innerHTML = html;
 }
 
+// --- Super Structure Rendering ---
+function renderSuperStructure() {
+  document.querySelector('.tracker-wrapper').style.display = 'none';
+  document.getElementById('summary-panel').style.display = 'none';
+  workViewContainer.style.display = 'none';
+  document.getElementById('superstructure-container').style.display = 'block';
+
+  const statuses = ['red', 'yellow', 'blue', 'green'];
+  const statusLabels = { red: 'Yet to Start', yellow: 'In Progress', blue: 'Pending', green: 'Completed' };
+
+  let html = '';
+  for (const block of BLOCKS) {
+    html += `<div class="ss-block">`;
+    html += `<div class="ss-block-title">${block} BLOCK</div>`;
+    html += `<div style="overflow-x:auto;"><table class="ss-table">`;
+    html += `<thead><tr><th>S.No</th><th>Work Description</th>`;
+    html += `<th>Yet to Start</th><th>In Progress</th><th>Pending</th><th>Completed</th>`;
+    html += `</tr></thead><tbody>`;
+
+    SUPER_STRUCTURE_ITEMS.forEach((item, wi) => {
+      const cellId = `superstructure_${block}_${wi}`;
+      const cell = cellsCache[cellId];
+      const currentStatus = cell && cell.status ? cell.status : null;
+
+      html += `<tr><td>${wi + 1}</td><td>${item}</td>`;
+      statuses.forEach(st => {
+        const isActive = currentStatus === st;
+        const activeClass = isActive ? `active-${st}` : '';
+        html += `<td><div class="ss-cell ${activeClass}" data-cell="${cellId}" data-work="${wi}" data-status="${st}" data-block="${block}" title="${statusLabels[st]}"></div></td>`;
+      });
+      html += `</tr>`;
+    });
+
+    html += `</tbody></table></div></div>`;
+  }
+
+  ssGrid.innerHTML = html;
+
+  // Attach click events (set status)
+  ssGrid.querySelectorAll('.ss-cell').forEach(cell => {
+    cell.addEventListener('click', async (e) => {
+      const block = cell.dataset.block;
+      const wi = parseInt(cell.dataset.work);
+      const status = cell.dataset.status;
+      const cellId = cell.dataset.cell;
+      const existing = cellsCache[cellId];
+      const currentStatus = existing && existing.status ? existing.status : null;
+      // Toggle: if clicking same status, clear it; otherwise set new status
+      const newStatus = currentStatus === status ? null : status;
+      await saveSuperStatus(block, wi, newStatus);
+      renderSuperStructure();
+    });
+    // Right-click opens timeline modal
+    cell.addEventListener('contextmenu', (e) => {
+      e.preventDefault();
+      const wi = parseInt(cell.dataset.work);
+      const itemName = SUPER_STRUCTURE_ITEMS[wi];
+      openTimelineModal(cell.dataset.cell, wi, '-', itemName);
+    });
+  });
+}
+
 // --- Work View Rendering ---
 function renderWorkView() {
   document.querySelector('.tracker-wrapper').style.display = 'none';
@@ -595,6 +742,8 @@ document.querySelectorAll('.block-tab').forEach(tab => {
     await loadAllCells();
     if (currentView === 'work') {
       renderWorkView();
+    } else if (currentView === 'super') {
+      renderSuperStructure();
     } else {
       renderTracker();
       renderSummary();
@@ -612,6 +761,8 @@ document.querySelectorAll('.floor-tab').forEach(tab => {
     await loadAllCells();
     if (currentView === 'work') {
       renderWorkView();
+    } else if (currentView === 'super') {
+      renderSuperStructure();
     } else {
       renderTracker();
       renderSummary();
@@ -630,6 +781,8 @@ document.querySelectorAll('.view-tab').forEach(tab => {
     await loadAllCells();
     if (currentView === 'work') {
       renderWorkView();
+    } else if (currentView === 'super') {
+      renderSuperStructure();
     } else {
       renderTracker();
       renderSummary();
@@ -671,6 +824,7 @@ popupClear.addEventListener('click', async () => {
   await saveCellStatus(selectedCellId, null, selectedWorkIndex, selectedFlatNum);
   statusPopup.classList.remove('active');
   if (currentView === 'work') renderWorkView();
+  else if (currentView === 'super') renderSuperStructure();
   else renderTracker();
 });
 
@@ -680,6 +834,7 @@ popupSave.addEventListener('click', async () => {
   }
   statusPopup.classList.remove('active');
   if (currentView === 'work') renderWorkView();
+  else if (currentView === 'super') renderSuperStructure();
   else renderTracker();
 });
 
@@ -724,6 +879,7 @@ modalSave.addEventListener('click', async () => {
   await saveCellRemarks(selectedCellId, modalRemarks.value.trim());
   timelineModal.classList.remove('active');
   if (currentView === 'work') renderWorkView();
+  else if (currentView === 'super') renderSuperStructure();
   else renderTracker();
 });
 
@@ -738,6 +894,7 @@ backBtn.addEventListener('click', () => {
   settingsPage.style.display = 'none';
   dashboard.style.display = 'block';
   if (currentView === 'work') renderWorkView();
+  else if (currentView === 'super') renderSuperStructure();
   else renderTracker();
 });
 
