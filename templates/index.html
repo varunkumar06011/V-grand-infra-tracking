@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>V Grand Infra Tracker</title>
+  <link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body>
+
+<!-- Auth Screen -->
+<div id="auth-screen">
+  <div class="auth-box">
+    <h2 id="auth-title">Login</h2>
+    <div id="auth-error" class="auth-error"></div>
+    <input type="email" id="email-input" placeholder="Email">
+    <input type="password" id="password-input" placeholder="Password">
+    <button id="auth-submit">Login</button>
+    <div class="auth-toggle" id="auth-toggle">Don't have an account? Register</div>
+  </div>
+</div>
+
+<!-- Dashboard -->
+<div id="dashboard">
+  <div class="top-bar">
+    <div class="logo">V Grand Infra</div>
+    <div class="top-bar-center">
+      <button class="block-tab active" data-block="A">A Block</button>
+      <button class="block-tab" data-block="B">B Block</button>
+    </div>
+    <div class="top-bar-right">
+      <span id="user-email"></span>
+      <button id="settings-btn">Settings</button>
+      <button id="sign-out-btn">Sign Out</button>
+    </div>
+  </div>
+
+  <div class="floor-tabs" id="floor-tabs">
+    <button class="floor-tab active" data-floor="1">1st Floor</button>
+    <button class="floor-tab" data-floor="2">2nd Floor</button>
+    <button class="floor-tab" data-floor="3">3rd Floor</button>
+    <button class="floor-tab" data-floor="4">4th Floor</button>
+    <button class="floor-tab" data-floor="5">5th Floor</button>
+  </div>
+
+  <div class="legend">
+    <span class="legend-item"><span class="legend-dot red"></span> Yet to start</span>
+    <span class="legend-item"><span class="legend-dot yellow"></span> In progress</span>
+    <span class="legend-item"><span class="legend-dot blue"></span> Patch work / pending</span>
+    <span class="legend-item"><span class="legend-dot green"></span> Completed</span>
+    <span class="legend-item"><span class="legend-dot null"></span> No status</span>
+  </div>
+
+  <div class="tracker-wrapper">
+    <table class="tracker-table" id="tracker-table">
+      <thead id="tracker-head"></thead>
+      <tbody id="tracker-body"></tbody>
+    </table>
+  </div>
+</div>
+
+<!-- Settings Page -->
+<div id="settings-page">
+  <div class="settings-header">
+    <h2>Work Items Settings</h2>
+    <button class="back-btn" id="back-btn">Back to Tracker</button>
+  </div>
+  <div class="work-list" id="work-list"></div>
+  <button class="add-work-btn" id="add-work-btn">+ Add Work Item</button>
+  <button class="save-settings-btn" id="save-settings-btn">Save Work Items</button>
+</div>
+
+<!-- Status Picker Popup -->
+<div class="popup-overlay" id="status-popup">
+  <div class="popup-box">
+    <h3 id="popup-title">Flat 101 - Brick work</h3>
+    <div class="popup-sub" id="popup-sub"></div>
+    <div class="current-status" id="popup-current"></div>
+    <div class="color-options">
+      <div class="color-opt red" data-color="red" title="Yet to start"></div>
+      <div class="color-opt yellow" data-color="yellow" title="In progress"></div>
+      <div class="color-opt blue" data-color="blue" title="Patch work / pending"></div>
+      <div class="color-opt green" data-color="green" title="Completed"></div>
+    </div>
+    <div class="popup-actions">
+      <button class="btn-clear" id="popup-clear">Clear</button>
+      <button class="btn-cancel" id="popup-cancel">Cancel</button>
+      <button class="btn-save" id="popup-save">Save</button>
+    </div>
+  </div>
+</div>
+
+<!-- Timeline Modal -->
+<div class="modal-overlay" id="timeline-modal">
+  <div class="modal-box">
+    <h3 id="modal-title">Flat 101 - Brick work</h3>
+    <div class="modal-sub" id="modal-sub"></div>
+    <div class="timeline-list" id="timeline-list"></div>
+    <label style="font-weight:600; margin-bottom:6px; display:block;">Remarks</label>
+    <textarea class="remarks-area" id="modal-remarks" placeholder="Add remarks..."></textarea>
+    <div class="modal-actions">
+      <button class="btn-close" id="modal-close">Close</button>
+      <button class="btn-save" id="modal-save">Save Remarks</button>
+    </div>
+  </div>
+</div>
+
+<!-- Loading -->
+<div class="loading-overlay" id="loading">Loading...</div>
+
+<!-- Firebase SDKs -->
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
+<script src="/static/js/firebase-config.js"></script>
+<script src="/static/js/app.js"></script>
+</body>
+</html>
