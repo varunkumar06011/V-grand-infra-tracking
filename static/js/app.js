@@ -316,11 +316,19 @@ async function saveCellStatus(cellId, color, workIndex, flatNum) {
 
   timeline.push(entry);
 
-  let newRemarks = oldRemarks;
+  // Strip old auto-remarks before adding the new one
+  const autoPatterns = ['Patch work started on', 'Completed on', 'Work started on'];
+  let cleanedRemarks = oldRemarks
+    .split('\n')
+    .filter(line => !autoPatterns.some(p => line.trim().startsWith(p)))
+    .join('\n')
+    .trim();
+
+  let newRemarks = cleanedRemarks;
   if (color) {
     const auto = getAutoRemark(color);
     if (auto) {
-      newRemarks = oldRemarks ? oldRemarks + '\n' + auto : auto;
+      newRemarks = cleanedRemarks ? cleanedRemarks + '\n' + auto : auto;
     }
   }
 
