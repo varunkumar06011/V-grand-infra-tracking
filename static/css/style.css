@@ -68,14 +68,18 @@ body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background:
 .legend-dot {
   width: 20px; height: 20px; border-radius: 4px; border: 1px solid #999;
 }
-.legend-dot.red { background: #e74c3c; }
-.legend-dot.yellow { background: #f1c40f; }
-.legend-dot.blue { background: #3498db; }
-.legend-dot.green { background: #2ecc71; }
+.legend-dot.red { background: #FF0000; }
+.legend-dot.yellow { background: #FFD700; }
+.legend-dot.blue { background: #4169E1; }
+.legend-dot.green { background: #32CD32; }
+.block-b .legend-dot.red { background: #8B0000; }
+.block-b .legend-dot.yellow { background: #B8860B; }
+.block-b .legend-dot.blue { background: #00008B; }
+.block-b .legend-dot.green { background: #006400; }
 .legend-dot.null { background: #ecf0f1; border: 1px solid #bdc3c7; }
 
 /* Tracker grid */
-.tracker-wrapper { overflow-x: auto; }
+.tracker-wrapper { overflow-x: auto; -webkit-overflow-scrolling: touch; }
 .tracker-table {
   width: 100%; border-collapse: collapse; background: #fff;
   border-radius: 8px; overflow: hidden; min-width: 900px;
@@ -84,7 +88,7 @@ body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background:
   border: 1px solid #ddd; padding: 10px; text-align: center; vertical-align: middle;
 }
 .tracker-table th {
-  background: #34495e; color: #fff; font-weight: 600; position: sticky; top: 0;
+  background: #2c3e50; color: #fff; font-weight: 600; position: sticky; top: 0;
 }
 .tracker-table th:first-child, .tracker-table td:first-child {
   text-align: left; min-width: 180px; background: #ecf0f1; font-weight: 600;
@@ -93,15 +97,24 @@ body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background:
   text-align: left; min-width: 220px; background: #f8f9fa; font-size: 0.85rem;
 }
 .cell-btn {
-  width: 40px; height: 40px; border-radius: 6px; border: 1px solid #ccc;
+  width: 40px; height: 40px; border-radius: 4px; border: 2px solid #333;
   cursor: pointer; display: inline-block; background: #ecf0f1;
   transition: transform 0.1s;
 }
-.cell-btn:hover { transform: scale(1.1); border-color: #666; }
-.cell-btn.red { background: #e74c3c; border-color: #c0392b; }
-.cell-btn.yellow { background: #f1c40f; border-color: #d4ac0d; }
-.cell-btn.blue { background: #3498db; border-color: #2980b9; }
-.cell-btn.green { background: #2ecc71; border-color: #27ae60; }
+.cell-btn:hover { transform: scale(1.15); }
+
+/* A Block - bright colors */
+.block-a .cell-btn.red { background: #FF0000; border-color: #CC0000; }
+.block-a .cell-btn.yellow { background: #FFD700; border-color: #CCAA00; }
+.block-a .cell-btn.blue { background: #4169E1; border-color: #27408B; }
+.block-a .cell-btn.green { background: #32CD32; border-color: #228B22; }
+
+/* B Block - dark colors */
+.block-b .cell-btn.red { background: #8B0000; border-color: #550000; }
+.block-b .cell-btn.yellow { background: #B8860B; border-color: #8B6508; }
+.block-b .cell-btn.blue { background: #00008B; border-color: #000055; }
+.block-b .cell-btn.green { background: #006400; border-color: #003300; }
+
 .history-link {
   display: block; font-size: 0.7rem; color: #3498db; cursor: pointer;
   margin-top: 4px; text-decoration: underline;
@@ -128,10 +141,10 @@ body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background:
 }
 .color-opt:hover { transform: scale(1.15); }
 .color-opt.selected { border-color: #2c3e50; box-shadow: 0 0 0 3px rgba(44,62,80,0.2); }
-.color-opt.red { background: #e74c3c; }
-.color-opt.yellow { background: #f1c40f; }
-.color-opt.blue { background: #3498db; }
-.color-opt.green { background: #2ecc71; }
+.color-opt.red { background: #FF0000; }
+.color-opt.yellow { background: #FFD700; }
+.color-opt.blue { background: #4169E1; }
+.color-opt.green { background: #32CD32; }
 .popup-actions { display: flex; gap: 10px; justify-content: flex-end; }
 .popup-actions button {
   padding: 10px 18px; border-radius: 6px; border: none; cursor: pointer; font-size: 0.95rem;
@@ -164,10 +177,14 @@ body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background:
 }
 .timeline-item:last-child { border-bottom: none; }
 .timeline-dot { width: 14px; height: 14px; border-radius: 3px; flex-shrink: 0; }
-.timeline-dot.red { background: #e74c3c; }
-.timeline-dot.yellow { background: #f1c40f; }
-.timeline-dot.blue { background: #3498db; }
-.timeline-dot.green { background: #2ecc71; }
+.timeline-dot.red { background: #FF0000; }
+.timeline-dot.yellow { background: #FFD700; }
+.timeline-dot.blue { background: #4169E1; }
+.timeline-dot.green { background: #32CD32; }
+.block-b .timeline-dot.red { background: #8B0000; }
+.block-b .timeline-dot.yellow { background: #B8860B; }
+.block-b .timeline-dot.blue { background: #00008B; }
+.block-b .timeline-dot.green { background: #006400; }
 .timeline-info { flex: 1; }
 .timeline-meta { color: #888; font-size: 0.8rem; }
 .remarks-area {
@@ -219,69 +236,51 @@ body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background:
 }
 .loading-overlay.active { display: flex; }
 
-/* ========== Mobile Responsive ========== */
-@media (max-width: 768px) {
-  .top-bar {
-    flex-wrap: wrap;
-    padding: 10px 12px;
-    gap: 8px;
-  }
-  .logo { font-size: 1.1rem; flex: 1 1 100%; text-align: center; margin-bottom: 4px; }
-  .top-bar-center { flex: 1; justify-content: center; }
-  .top-bar-right {
-    flex: 1 1 100%;
-    justify-content: center;
-    font-size: 0.85rem;
-    flex-wrap: wrap;
-    gap: 8px;
-  }
-  #user-email { display: none; }
-  #sign-out-btn, #settings-btn { padding: 5px 10px; font-size: 0.8rem; }
-
-  .floor-tabs { gap: 4px; }
-  .floor-tab { padding: 6px 10px; font-size: 0.85rem; }
-
-  .legend { gap: 8px; padding: 8px 12px; }
-  .legend-item { font-size: 0.8rem; }
-  .legend-dot { width: 16px; height: 16px; }
-
-  .tracker-table th, .tracker-table td {
-    padding: 6px 4px;
-    font-size: 0.8rem;
-  }
-  .tracker-table th:first-child, .tracker-table td:first-child {
-    min-width: 120px;
-    font-size: 0.75rem;
-  }
-  .cell-btn { width: 28px; height: 28px; border-radius: 4px; }
-  .history-link { font-size: 0.6rem; }
-
-  .auth-box { padding: 28px 20px; width: 92vw; }
-
-  .popup-box { padding: 20px; width: 92vw; }
-  .color-opt { width: 40px; height: 40px; }
-
-  .modal-box { padding: 20px; width: 94vw; max-height: 90vh; }
-  .timeline-list { max-height: 220px; }
-
-  .settings-header { flex-wrap: wrap; gap: 10px; }
-  .work-item-row { padding: 10px 12px; }
+/* Summary panel */
+.summary-panel {
+  margin-top: 20px;
+  background: #fff;
+  border-radius: 8px;
+  padding: 16px 20px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.08);
 }
+.summary-panel h3 {
+  color: #2c3e50;
+  margin-bottom: 12px;
+  font-size: 1.1rem;
+}
+.summary-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.9rem;
+}
+.summary-table th {
+  background: #34495e;
+  color: #fff;
+  padding: 10px 12px;
+  text-align: left;
+  font-weight: 600;
+}
+.summary-table td {
+  padding: 10px 12px;
+  border-bottom: 1px solid #eee;
+}
+.summary-table tr:hover { background: #f8f9fa; }
+.summary-table td:nth-child(1) { text-align: center; width: 60px; }
+.summary-table td:nth-child(2) { text-align: center; width: 80px; font-weight: 600; }
+.summary-table td:nth-child(3) { width: 120px; color: #666; }
 
-@media (max-width: 480px) {
-  .top-bar { padding: 8px; }
-  .logo { font-size: 1rem; }
-  .block-tab { padding: 6px 12px; font-size: 0.9rem; }
+/* ========== Simple Mobile ========== */
+@media (max-width: 768px) {
+  .auth-box { width: 92vw; padding: 28px 20px; }
+  .popup-box, .modal-box { width: 92vw; }
 
-  .floor-tab { padding: 5px 8px; font-size: 0.8rem; }
+  .top-bar { flex-direction: column; gap: 8px; padding: 10px; }
+  .top-bar-right { gap: 8px; }
+  #user-email { display: none; }
 
-  .cell-btn { width: 24px; height: 24px; }
-  .tracker-table th:first-child, .tracker-table td:first-child {
-    min-width: 100px;
-    font-size: 0.7rem;
-  }
-  .tracker-table th, .tracker-table td {
-    padding: 4px 2px;
-    font-size: 0.7rem;
-  }
+  .cell-btn { width: 28px; height: 28px; }
+  .tracker-table { min-width: 100%; }
+  .tracker-table th, .tracker-table td { padding: 6px 3px; font-size: 0.75rem; }
+  .tracker-table th:first-child, .tracker-table td:first-child { min-width: 110px; }
 }

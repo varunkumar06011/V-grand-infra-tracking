@@ -110,6 +110,9 @@ const workList = document.getElementById('work-list');
 const addWorkBtn = document.getElementById('add-work-btn');
 const saveSettingsBtn = document.getElementById('save-settings-btn');
 const demoLoginBtn = document.getElementById('demo-login');
+const summaryBlock = document.getElementById('summary-block');
+const summaryFloor = document.getElementById('summary-floor');
+const summaryBody = document.getElementById('summary-body');
 
 // --- Auth ---
 let isRegister = false;
@@ -182,7 +185,9 @@ async function initDashboard() {
   showLoading(true);
   await loadWorkItems();
   await loadAllCells();
+  updateBlockClass();
   renderTracker();
+  renderSummary();
   showLoading(false);
 }
 
@@ -363,6 +368,49 @@ function renderTracker() {
       parseInt(link.dataset.flat)
     ));
   });
+  renderSummary();
+}
+
+function updateBlockClass() {
+  dashboard.classList.remove('block-a', 'block-b');
+  dashboard.classList.add(currentBlock === 'B' ? 'block-b' : 'block-a');
+}
+
+function getOrdinalText(n) {
+  const ordinals = ['', '1st', '2nd', '3rd', '4th', '5th'];
+  return ordinals[n] || (n + 'th');
+}
+
+function renderSummary() {
+  summaryBlock.textContent = currentBlock;
+  summaryFloor.textContent = getOrdinalText(currentFloor);
+  const flats = getFlatNumbers(currentFloor);
+  let html = '';
+  flats.forEach((flat, idx) => {
+    let flatRemarks = [];
+    let latestDate = '';
+    for (let wi = 0; wi < workItems.length; wi++) {
+      const cellId = getCellId(currentBlock, currentFloor, flat, wi);
+      const cell = cellsCache[cellId];
+      if (cell && cell.remarks) {
+        flatRemarks.push(cell.remarks);
+      }
+      if (cell && cell.timeline && cell.timeline.length > 0) {
+        const last = cell.timeline[cell.timeline.length - 1];
+        if (last.date) latestDate = last.date;
+      }
+    }
+    const remarksText = flatRemarks.length > 0
+      ? flatRemarks.join(' | ').substring(0, 200) + (flatRemarks.join(' | ').length > 200 ? '...' : '')
+      : '';
+    html += `<tr>
+      <td>${idx + 1}</td>
+      <td>${flat}</td>
+      <td>${latestDate || '-'}</td>
+      <td>${remarksText}</td>
+    </tr>`;
+  });
+  summaryBody.innerHTML = html;
 }
 
 // --- Block / Floor Tabs ---
@@ -371,6 +419,7 @@ document.querySelectorAll('.block-tab').forEach(tab => {
     document.querySelectorAll('.block-tab').forEach(t => t.classList.remove('active'));
     tab.classList.add('active');
     currentBlock = tab.dataset.block;
+    updateBlockClass();
     showLoading(true);
     await loadAllCells();
     renderTracker();
@@ -386,6 +435,7 @@ document.querySelectorAll('.floor-tab').forEach(tab => {
     showLoading(true);
     await loadAllCells();
     renderTracker();
+    renderSummary();
     showLoading(false);
   });
 });
