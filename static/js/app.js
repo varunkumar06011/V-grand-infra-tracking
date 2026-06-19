@@ -6,11 +6,27 @@ const STATUS_LABELS = {
 };
 
 const DEFAULT_WORK_ITEMS = [
-  'Brick work', 'Plastering', 'Electrical pipe', 'Pop bolster',
-  'Bathroom plumbing', 'Baby sink lines', 'Tiles', 'Pop primer',
-  'Window fitting', 'Window grills', 'Door frames', 'Door shutters',
-  'Grills', 'Main door', 'Flooring', 'Wall care', 'Primer', 'Putty',
-  'Paint', 'Dado tiles', 'Final coat'
+  'BRICK WORK',
+  'ELECTRICAL PIPE',
+  'MESH',
+  'PLASTERING',
+  'CEILING PAINT',
+  'POP FRAME',
+  'CEILING WIRING',
+  'POP SHEETS',
+  'WALL CARE',
+  'BATHROOM PLUMBING',
+  'WINDOW FRAME',
+  'BATH SWR LINES',
+  'BATH CONCRETING',
+  'TILES',
+  'DOORS FITTING',
+  'PAINT PRIMER',
+  'PAINT 1st COAT',
+  'WINDOWS FITTING',
+  'SWITCH BOARD FITTING',
+  'PATCH WORK',
+  '2nd COAT PAINTING'
 ];
 
 const BLOCKS = ['A', 'B'];
@@ -19,6 +35,14 @@ const FLATS_PER_FLOOR = 6;
 
 const LOGIN_EMAIL = 'vgrand@123';
 const LOGIN_PASSWORD = 'vgrand1234';
+const APP_VERSION = '2';
+
+// Version check: if app updated, clear stored work items so new defaults load
+const storedVersion = localStorage.getItem('vgrand_app_version');
+if (storedVersion !== APP_VERSION) {
+  localStorage.removeItem('vgrand_settings_workItems');
+  localStorage.setItem('vgrand_app_version', APP_VERSION);
+}
 
 // localStorage helpers
 function dbGet(docPath) {
